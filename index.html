@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotos Aleatórias</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            margin: 0;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .clock {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+        .image-grid img {
+            width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .image-grid img:hover {
+            transform: scale(1.05);
+        }
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .fullscreen img {
+            max-width: 90%;
+            max-height: 90%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+        .tooltip {
+          position: absolute;
+          background-color: rgba(0, 0, 0, 0.75);
+          color: #fff;
+          padding: 5px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 1000;
+          opacity: 0;
+          transition: opacity 0.2s ease-in-out;
+        }
+    
+        .tooltip.visible {
+          opacity: 1;
+        }
+
+        .grid-spinner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(18, 18, 18, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 6px solid rgba(255, 255, 255, 0.3);
+            border-top: 6px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="clock" id="clock"></div>
+        <h1>Galeria de Fotos Aleatórias</h1>
+    </div>
+    <div class="image-grid" id="image-grid">
+        <div class="grid-spinner" id="grid-spinner">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <div class="fullscreen" id="fullscreen" style="display: none;">
+        <img id="fullscreen-image" src="" alt="Foto em Tela Cheia">
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <footer>
+        <p>Feito com ajuda do Canvas do ChatGPT e Blackbox.ai para geração das imagens.</p>
+    </footer>
+
+    <script>
+        const imageGrid = document.getElementById('image-grid');
+        const clockElement = document.getElementById('clock');
+        const fullscreen = document.getElementById('fullscreen');
+        const fullscreenImage = document.getElementById('fullscreen-image');
+
+        async function generateText(content) {
+            const response = await fetch('https://mid-chat.deno.dev', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify([
+                    {
+                        content,
+                        role: "user"
+                    }
+                ])
+            });
+
+            if (!response.ok) {
+                console.error('Error fetching animal examples:', response.statusText);
+                return [];
+            }
+
+            return response.text();
+        }
+
+        async function generateAnimalsText() {
+            console.log('gerando')
+            const textResponse = await generateText("responda somente com exemplos de animais, no formato [{ \"name\": \"cachorro\", \"description\": \" O cachorro (*Canis lupus familiaris*) é um mamífero carnívoro domesticado há milhares de anos, descendente do lobo. Conhecido como \"o melhor amigo do homem\", é extremamente leal e sociável. Cachorros são animais inteligentes, capazes de aprender comandos e se adaptar a diferentes ambientes. Existem diversas raças, variando em tamanho, pelagem e comportamento. São usados como companhia, trabalho (pastoreio, guarda) e até em serviços de resgate e terapia.\"}, { \"name\": \"gato\", \"description\": \"O gato (*Felis catus*) é um mamífero carnívoro e um dos animais de estimação mais populares no mundo. Conhecido por sua independência, agilidade e hábitos noturnos, o gato é um caçador natural de pequenos animais, como roedores e pássaros. Possui sentidos apurados, especialmente a visão noturna e a audição. São animais que se comunicam por meio de miados, ronronados e linguagem corporal\" }, { \"name\": \"rato\", \"description\": \"O rato é um pequeno roedor pertencente à família *Muridae*. Conhecido por sua alta capacidade de adaptação, ele habita diversos ambientes, desde áreas urbanas até zonas rurais. Os ratos são onívoros, alimentando-se de grãos, frutas, insetos e até lixo. São animais de hábitos noturnos e possuem uma reprodução rápida, o que os torna muitas vezes pragas. Algumas espécies, como o rato-doméstico, são comuns em convívio humano.\" }], tudo no mesmo array, me de 4 animais aleatórios de exemplo")
+            try {
+                const animalsArray = JSON.parse(JSON.parse(textResponse).text);
+                return animalsArray;
+            } catch (error) {
+                console.error('Error parsing response as JSON:', error, textResponse);
+                return [];
+            }
+        }
+
+        async function generateImages() {
+            const animalsArray = await generateAnimalsText();
+            console.log(animalsArray)
+            if (animalsArray.length === 0) {
+                console.error('No animal examples found');
+                return;
+            }
+
+            return animalsArray.map(async animal => {
+                const response = await fetch('https://mid-chat.deno.dev/image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(
+                        {
+                            prompt: `gere uma imagem que represente o animal: ${animal.name}, essa é uma descrição que pode ajudar ${animal.description}`
+                        }
+                    )
+                });
+
+                if (!response.ok) {
+                    console.error('Error fetching animal examples:', response.statusText);
+                    return [];
+                }
+
+
+                const { url } = await response.json();
+                console.log('Image URL:', url);
+
+                return { animal, url };
+            });
+        }
+
+        async function generateAnimalsData() {
+            console.log('gerando')
+            
+            const response = await fetch('https://mid-chat.deno.dev/generate-animals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).catch(error => {
+                console.error('Error fetching animal examples:', error);
+                return [];
+            });
+
+            if (!response.ok) {
+                console.error('Error fetching animal examples:', response.statusText);
+                return [];
+            }
+
+
+            const animalsData = await response.json();
+
+            console.log(animalsData)
+
+            animalsData.forEach(({name, description, imageUrl}) => {
+                const img = document.createElement('img');
+                const tooltip = document.getElementById('tooltip');
+            
+                img.src = imageUrl;
+                img.alt = description;
+                img.addEventListener('click', () => openFullscreen(img.src));
+                img.addEventListener('mousemove', (e) => {
+                    // Define o conteúdo do tooltip com o valor do atributo alt da imagem
+                    tooltip.textContent = img.getAttribute('alt');
+            
+                    // Posiciona o tooltip próximo ao cursor (offset de 10px)
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+            
+                    // Exibe o tooltip adicionando a classe 'visible'
+                    tooltip.classList.add('visible');
+                });
+                img.addEventListener('mouseout', () => {
+                    tooltip.classList.remove('visible');
+                });
+
+                imageGrid.appendChild(img);
+
+                
+                const gridSpinner = document.getElementById('grid-spinner');
+                if (gridSpinner) {
+                    gridSpinner.remove();
+                }
+            });
+        }
+
+        function openFullscreen(src) {
+            fullscreenImage.src = src;
+            fullscreen.style.display = 'flex';
+        }
+
+        function closeFullscreen() {
+            fullscreen.style.display = 'none';
+        }
+
+        fullscreen.addEventListener('click', closeFullscreen);
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+        generateAnimalsData();
+    </script>
+</body>
+</html>
