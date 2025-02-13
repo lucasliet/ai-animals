@@ -50,6 +50,13 @@
             transition: transform 0.3s ease;
             cursor: pointer;
         }
+        
+        @media (max-width: 767px) {
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .image-grid img:hover {
             transform: scale(1.05);
         }
@@ -79,8 +86,8 @@
           color: #fff;
           padding: 5px 8px;
           border-radius: 4px;
-          font-size: 12px;
-          white-space: nowrap;
+          max-width: 200px;
+          white-space: normal;
           pointer-events: none;
           z-index: 1000;
           opacity: 0;
@@ -246,7 +253,9 @@
             
                 img.src = imageUrl;
                 img.alt = description;
-                img.addEventListener('click', () => openFullscreen(img.src));
+                if (window.innerWidth > 767) {
+                    img.addEventListener('click', () => openFullscreen(img.src));
+                }
                 img.addEventListener('mousemove', (e) => {
                     // Define o conteúdo do tooltip com o valor do atributo alt da imagem
                     tooltip.textContent = img.getAttribute('alt');
